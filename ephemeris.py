@@ -4,28 +4,46 @@
 # the PyEphem library, which is based on a C library from XEphem.
 #
 # Author: David Bryant (djbryant@gmail.com)
-# Version: 0.2
-# Date: February 16, 2013
+# Version: 1.0
+# Date: March 3, 2013
 
 import ephem
 import argparse
 import math
 
+# Here's the output table we want to generate:
+#
 #  BODY  | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  | PHASE |
 #--------+-----+- ------+--------+-------------+-------------+-------+-------+
 #Sun     | No  |   ---  |   ---  | 02/21 06:54 | 02/21 18:55 |  ---  |  ---  |
 #Jupiter | Yes | ddd:mm | ddd:mm | mm/dd hh:mm | mm/dd hh:mm | -28.6 | 0.375 |
 
-# Function to pretty print planet info
-def print_planet(name,body,location,now):
-    body.compute(location)
-    if body.alt < 0:
-        # print "{:7s}: Not visible".format(name)
-        print_visinfo(name,body,location,now)
-    else:
-        print "{:7s}: is visible now: alt = {}, az = {}, mag = {}".format(name,body.alt,body.az,body.mag)
+# Short lists of additional cities of interest not known to PyEphem
+_mycity_data = {
+    'Los Gatos': ('37.2276', '-121.99', 400),  # California USA
+    'Manaus': ('-3.12854', '-60.00018', 41.4),  # Amazonas, Brazil
+    }
 
-# Function to format date + time
+# And a utility function to look up a city in our additional list
+def additional_city(name):
+    try:
+        data = _mycity_data[name]
+    except KeyError:
+        raise KeyError('Unknown city: %r' % (name,))
+    o = ephem.Observer()
+    o.name = name
+    o.lat, o.lon, o.elevation = data
+    o.compute_pressure()
+    return o
+
+
+# Function to fully display a datetime object (the way I like to see it :-)
+def fmt_fulldatetime(dttm):
+    return "{:02d}/{:02d}/{:02d} {:02d}:{:02d}:{:02d}".format(
+        dttm.month,dttm.day,dttm.year,
+        dttm.hour,dttm.minute,dttm.second)
+
+# Function to format a datetime object just as day/mo + hr:min
 def fmt_datetime(dttm):
     return "{:02d}/{:02d} {:02d}:{:02d}".format(dttm.month,dttm.day,dttm.hour,dttm.minute)
 
@@ -36,9 +54,16 @@ def fmt_angle(a):
     min = int( ((a - deg) * 60) + 0.5)
     return "{:3d}:{:02d}".format(deg,min)
 
-# Function to handle displaying rise/set information
-def print_visinfo(body,location,now):
-    body.compute(location)
+# Function to format a Date object the way I like to see it
+def fmt_date(date):
+    d = date.tuple()
+    return "{:02d}/{:02d}/{:02d} {:02d}:{:02d}:{:04.1f}".format(
+        d[1],d[2],d[0],d[3],d[4],d[5])
+
+# Function to generate the output table entry for a body at a specific location.  Note
+# that the location object contains the specific time of interest (location.date)
+def print_visinfo(body,location):
+    body.compute(location) # Compute the viewing details
     # Handle the case when the body is above the horizon (so already rose)
     if body.alt > 0:
         body_rise = ephem.localtime(location.previous_rising(body))
@@ -58,68 +83,62 @@ def print_visinfo(body,location,now):
         body.compute(location)
         r_time = fmt_datetime(body_rise)
         s_time = fmt_datetime(body_set)
-
-        now_tp = now.tuple()
-        if body_rise.year == now_tp[0] and body_rise.month == now_tp[1] and body_rise.day == now_tp[2]:
-            rise_when = "today"
-        else:
-            rise_when = "tomorrow"
-        if body_set.year == now_tp[0] and body_set.month == now_tp[1] and body_set.day == now_tp[2]:
-            set_when = "today"
-        else:
-            set_when = "tomorrow"
         print "{:7s} | No  |   ---  |   ---  | {} | {} |  ---  |".format(body.name,r_time,s_time)
 
 
 # ----- Main program functionality starts here -----
+
 # Create the argument parser
 parser = argparse.ArgumentParser()
 
 # Arguments supported
-#  --now    OPTIONAL, just display current observing info  (up/set, alt, az, etc.)
-#  --daily  OPTIONAL, just display daily observing info (rise, set, etc.)
+#  -c,--city  OPTIONAL, specifies the city of the observer
 
-parser.add_argument("--now",
-     help="Display only current observing info (up/set, alt, az, etc.)",
-     action="store_true")
-parser.add_argument("--daily",
-     help="Display only daily observing info (rise, set, etc.)",
-     action="store_true")
+parser.add_argument("-c","--city",help="City of the observer",
+	default="Los Gatos")
 
-# Parse command line arguments
 args = parser.parse_args()
 
+# Look up the observer's city using both the list built into PyEphem and our own
+# private one defined here
+try:
+    site = ephem.city(args.city)
+except KeyError:
+    try:
+        site = additional_city(args.city)
+    except:
+        print "City not found in global or local list"
+        exit(0)
+        
 
-# Get current local time
+# Get current time and use that for our observer.  Note that the result of
+# ephem.now() is a time in UT so it isn't location dependent.  However, the 
+# times displayed by ephem.localtime() will be converted to whatever time and
+# timezone the clock on your computer is set to.  This might confuse you if
+# you specify an observer location in a time zone other than where you are now,
+# but if you think about it carefully you'll see that the information displayed
+# is correct.
 now = ephem.now()
+site.date = now
 
-# Observer at Los Gatos, CA
-losgatos = ephem.Observer()
-#losgatos.lon = '-121.9676'
-#losgatos.lat = '37.1367'
-losgatos.lon = '-121.99'
-losgatos.lat = '37.2276'
-losgatos.elevation = 400
-losgatos.date = now
-location_name = 'Los Gatos, CA'
-
-
-print "***** Currently at {} ({})*****".format(location_name,ephem.localtime(losgatos.date))
+# Generate the output information
+print "***** Currently at {} ({}) *****".format(site.name,
+    fmt_fulldatetime(ephem.localtime(site.date)))
 
 # First do Sun and Moon
-s = ephem.Sun(losgatos)
-m = ephem.Moon(losgatos)
+s = ephem.Sun(site)
+m = ephem.Moon(site)
 # Observer-based rise/set calculations modifies the body involved, so need to create
 # 'disposable' ones we don't mind having modififed
-s_loc = ephem.Sun(losgatos)
-m_loc = ephem.Moon(losgatos)
+s_loc = ephem.Sun(site)
+m_loc = ephem.Moon(site)
 
 
 print "\n*** Sun and Moon ***"
 print "  BODY  | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
 print "--------+-----+--------+--------+-------------+-------------+-------+"
-print_visinfo(s_loc,losgatos,now)
-print_visinfo(m_loc,losgatos,now)
+print_visinfo(s_loc,site)
+print_visinfo(m_loc,site)
 print "--------+-----+--------+--------+-------------+-------------+-------+"
 
 print "\n*** Lunar Phase information: ***"
@@ -135,18 +154,22 @@ lunation = (now-prev_new)/(next_new-prev_new)
 
 print "Current lunar illumination is {:0.1f}%, lunation is {:0.4f}".format(phase*100,lunation)
 if lunation < 0.25:
-    print "Was just New Moon at {} UT".format(ephem.previous_new_moon(now))
+    print "Was just New Moon at {} UT".format(fmt_date(ephem.previous_new_moon(now)))
 elif lunation < 0.5:
-    print "Was just First Quarter at {} UT".format(ephem.previous_first_quarter_moon(now))
+    print "Was just First Quarter at {} UT".format(fmt_date(ephem.previous_first_quarter_moon(now)))
 elif lunation < 0.75:
-    print "Was just Full Moon at {} UT".format(ephem.previous_full_moon(now))
+    print "Was just Full Moon at {} UT".format(fmt_date(ephem.previous_full_moon(now)))
 else:
-    print "Was just Last Quarter at {} UT".format(ephem.previous_last_quarter_moon(now))
+    print "Was just Last Quarter at {} UT".format(fmt_date(ephem.previous_last_quarter_moon(now)))
 
-print "New Moon     : {} UT ({} Local time)".format(next_new,ephem.localtime(next_new))
-print "First Quarter: {} UT ({} Local time)".format(next_first,ephem.localtime(next_first))
-print "Full Moon    : {} UT ({} Local time)".format(next_full,ephem.localtime(next_full))
-print "Last Quarter : {} UT ({} Local time)".format(next_last,ephem.localtime(next_last))
+print "New Moon     : {} UT ({} Local time)".format(
+    fmt_date(next_new),fmt_fulldatetime(ephem.localtime(next_new)))
+print "First Quarter: {} UT ({} Local time)".format(
+    fmt_date(next_first),fmt_fulldatetime(ephem.localtime(next_first)))
+print "Full Moon    : {} UT ({} Local time)".format(
+    fmt_date(next_full),fmt_fulldatetime(ephem.localtime(next_full)))
+print "Last Quarter : {} UT ({} Local time)".format(
+    fmt_date(next_last),fmt_fulldatetime(ephem.localtime(next_last)))
 
 print "\n*** Planets ***"
 mercury = ephem.Mercury()
@@ -160,14 +183,14 @@ pluto   = ephem.Pluto()
 
 print "  BODY  | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
 print "--------+-----+--------+--------+-------------+-------------+-------+"
-print_visinfo(mercury,losgatos,now)
-print_visinfo(venus,losgatos,now)
-print_visinfo(mars,losgatos,now)
-print_visinfo(jupiter,losgatos,now)
-print_visinfo(saturn,losgatos,now)
-print_visinfo(uranus,losgatos,now)
-print_visinfo(neptune,losgatos,now)
-print_visinfo(pluto,losgatos,now)
+print_visinfo(mercury,site)
+print_visinfo(venus,site)
+print_visinfo(mars,site)
+print_visinfo(jupiter,site)
+print_visinfo(saturn,site)
+print_visinfo(uranus,site)
+print_visinfo(neptune,site)
+print_visinfo(pluto,site)
 print "--------+-----+--------+--------+-------------+-------------+-------+"
 
 # Look for conjunctions
