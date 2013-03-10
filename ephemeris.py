@@ -13,10 +13,10 @@ import math
 
 # Here's the output table we want to generate:
 #
-#  BODY  | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  | PHASE |
-#--------+-----+- ------+--------+-------------+-------------+-------+-------+
-#Sun     | No  |   ---  |   ---  | 02/21 06:54 | 02/21 18:55 |  ---  |  ---  |
-#Jupiter | Yes | ddd:mm | ddd:mm | mm/dd hh:mm | mm/dd hh:mm | -28.6 | 0.375 |
+#       BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
+#-------------------+-----+--------+--------+-------------+-------------+-------+
+#Sun                | No  |   ---  |   ---  | 02/21 06:54 | 02/21 18:55 |  ---  |
+#Jupiter            | Yes | ddd:mm | ddd:mm | mm/dd hh:mm | mm/dd hh:mm | -28.6 |
 
 # Short lists of additional cities of interest not known to PyEphem
 _mycity_data = {
@@ -73,7 +73,7 @@ def print_visinfo(body,location):
 
         r_time = fmt_datetime(body_rise)
         s_time = fmt_datetime(body_set)
-        print "{:7s} | Yes | {} | {} | {} | {} | {:5.1f} |".format(body.name, 
+        print "{:.<18.18s} | Yes | {} | {} | {} | {} | {:5.1f} |".format(body.name, 
             fmt_angle(body.alt),fmt_angle(body.az), r_time, s_time, body.mag)
     else:
         # If the body isn't visible either it hasn't yet risen today, or it already set today
@@ -83,7 +83,7 @@ def print_visinfo(body,location):
         body.compute(location)
         r_time = fmt_datetime(body_rise)
         s_time = fmt_datetime(body_set)
-        print "{:7s} | No  |   ---  |   ---  | {} | {} |  ---  |".format(body.name,r_time,s_time)
+        print "{:.<18.18s} | No  |   ---  |   ---  | {} | {} |  ---  |".format(body.name,r_time,s_time)
 
 
 # ----- Main program functionality starts here -----
@@ -93,9 +93,11 @@ parser = argparse.ArgumentParser()
 
 # Arguments supported
 #  -c,--city  OPTIONAL, specifies the city of the observer
+#  -d,--date  OPTIONAL, specifies the date and time (in UT) for the observation
 
 parser.add_argument("-c","--city",help="City of the observer",
 	default="Los Gatos")
+parser.add_argument("-d","--date",help="Specify date and time in UT ('yyyy/mm/dd hh:mm') for the observer")
 
 args = parser.parse_args()
 
@@ -107,7 +109,7 @@ except KeyError:
     try:
         site = additional_city(args.city)
     except:
-        print "City not found in global or local list"
+        print "City '{}' not found in global or local list".format(args.city)
         exit(0)
         
 
@@ -118,7 +120,11 @@ except KeyError:
 # you specify an observer location in a time zone other than where you are now,
 # but if you think about it carefully you'll see that the information displayed
 # is correct.
-now = ephem.now()
+if args.date:
+    now = ephem.Date(args.date)
+else:
+    now = ephem.now()
+
 site.date = now
 
 # Generate the output information
@@ -135,11 +141,11 @@ m_loc = ephem.Moon(site)
 
 
 print "\n*** Sun and Moon ***"
-print "  BODY  | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
-print "--------+-----+--------+--------+-------------+-------------+-------+"
+print "       BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
+print "-------------------+-----+--------+--------+-------------+-------------+-------+"
 print_visinfo(s_loc,site)
 print_visinfo(m_loc,site)
-print "--------+-----+--------+--------+-------------+-------------+-------+"
+print "-------------------+-----+--------+--------+-------------+-------------+-------+"
 
 print "\n*** Lunar Phase information: ***"
 prev_new = ephem.previous_new_moon(now)
@@ -181,8 +187,8 @@ uranus  = ephem.Uranus()
 neptune = ephem.Neptune()
 pluto   = ephem.Pluto()
 
-print "  BODY  | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
-print "--------+-----+--------+--------+-------------+-------------+-------+"
+print "       BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
+print "-------------------+-----+--------+--------+-------------+-------------+-------+"
 print_visinfo(mercury,site)
 print_visinfo(venus,site)
 print_visinfo(mars,site)
@@ -191,7 +197,7 @@ print_visinfo(saturn,site)
 print_visinfo(uranus,site)
 print_visinfo(neptune,site)
 print_visinfo(pluto,site)
-print "--------+-----+--------+--------+-------------+-------------+-------+"
+print "-------------------+-----+--------+--------+-------------+-------------+-------+"
 
 # Look for conjunctions
 bodies = [s, m, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto ]
@@ -208,3 +214,16 @@ for i in range(n):
             print "{:7s} to {:7s} = {} (dd:mm)".format(bodies[i].name,bodies[j].name, fmt_angle(sep))
             count = count + 1
 
+
+# Handle special objects such as comets
+print "\n*** Special Objects ***"
+print "       BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
+print "-------------------+-----+--------+--------+-------------+-------------+-------+"
+panstarrs_x = "C/Pan-STARRS,h, 3/10.1691/2013,84.2072,65.6659,333.6512,1.000033,0.301546, 1/01/2000,5.5,4,0"
+panstarrs = ephem.readdb(panstarrs_x)
+print_visinfo(panstarrs,site);
+
+ison_x = "C/ISON,h,11/28.7929/2013,61.882,295.7335,345.5117,1.000004,0.012501, 1/01/2000,6,4,0"
+ison = ephem.readdb(ison_x)
+print_visinfo(ison,site)
+print "-------------------+-----+--------+--------+-------------+-------------+-------+"
