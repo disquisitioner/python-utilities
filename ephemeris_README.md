@@ -16,7 +16,7 @@ ephemeris.py [--city 'city'] [--date 'YYYY/MM/DD HH:MM']
     ***** Currently at Los Gatos (03/09/2013 17:48:48) *****
     
     *** Sun and Moon ***
-    BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
+           BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
     -------------------+-----+--------+--------+-------------+-------------+-------+
     Sun............... | Yes |   3:34 | 262:16 | 03/09 06:27 | 03/09 18:10 | -26.8 |
     Moon.............. | No  |   ---  |   ---  | 03/10 06:28 | 03/10 18:25 |  ---  |
@@ -31,7 +31,7 @@ ephemeris.py [--city 'city'] [--date 'YYYY/MM/DD HH:MM']
     Last Quarter : 04/03/2013 04:36:33.7 UT (04/02/2013 21:36:33 Local time)
     
     *** Planets ***
-    BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
+           BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
     -------------------+-----+--------+--------+-------------+-------------+-------+
     Mercury........... | No  |   ---  |   ---  | 03/10 06:45 | 03/10 18:11 |  ---  |
     Venus............. | No  |   ---  |   ---  | 03/10 07:22 | 03/10 18:45 |  ---  |
@@ -56,7 +56,7 @@ ephemeris.py [--city 'city'] [--date 'YYYY/MM/DD HH:MM']
     Mars    to Uranus  =   9:06 (dd:mm)
     
     *** Special Objects ***
-    BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
+           BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |
     -------------------+-----+--------+--------+-------------+-------------+-------+
     C/Pan-STARRS...... | Yes |  14:30 | 251:41 | 03/09 07:36 | 03/09 19:06 |   0.5 |
     C/ISON............ | Yes |  65:56 |  95:48 | 03/09 11:49 | 03/10 04:33 |  15.6 |

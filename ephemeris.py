@@ -66,14 +66,22 @@ def print_visinfo(body,location):
     body.compute(location) # Compute the viewing details
     # Handle the case when the body is above the horizon (so already rose)
     if body.alt > 0:
-        body_rise = ephem.localtime(location.previous_rising(body))
-        body_set  = ephem.localtime(location.next_setting(body))
+        # Body might have risen yesterday (is circumpolar)
+        try:
+            body_rise = ephem.localtime(location.previous_rising(body))
+            r_time = fmt_datetime(body_rise)
+        except ephem.CircumpolarError:
+            r_time = "already up "
+
+        # Body might not set today (is circumpolar)
+        try:
+            body_set  = ephem.localtime(location.next_setting(body))
+            s_time = fmt_datetime(body_set)
+        except ephem.CircumpolarError:
+            s_time = "doesn't set"
         # Location-based rise/set modifies body attributes, so need to recompute
         body.compute(location)
-
-        r_time = fmt_datetime(body_rise)
-        s_time = fmt_datetime(body_set)
-        print "{:.<18.18s} | Yes | {} | {} | {} | {} | {:5.1f} |".format(body.name, 
+        print "{:.<19.19s}| Yes | {} | {} | {} | {} | {:5.1f} |".format(body.name, 
             fmt_angle(body.alt),fmt_angle(body.az), r_time, s_time, body.mag)
     else:
         # If the body isn't visible either it hasn't yet risen today, or it already set today
@@ -83,7 +91,7 @@ def print_visinfo(body,location):
         body.compute(location)
         r_time = fmt_datetime(body_rise)
         s_time = fmt_datetime(body_set)
-        print "{:.<18.18s} | No  |   ---  |   ---  | {} | {} |  ---  |".format(body.name,r_time,s_time)
+        print "{:.<19.19s}| No  |   ---  |   ---  | {} | {} |  ---  |".format(body.name,r_time,s_time)
 
 
 # ----- Main program functionality starts here -----
@@ -200,7 +208,16 @@ print_visinfo(pluto,site)
 print "-------------------+-----+--------+--------+-------------+-------------+-------+"
 
 # Look for conjunctions
-bodies = [s, m, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto ]
+
+# M45 (The Pleiades) is close enough to the ecliptic that we'll include it in
+# conjunction searches.
+
+# Create a body for M45 (The Pleiades) by parsing its attributes in XEphem format
+m45_x = "M45,f|U,3:47:0,24:07:0,1.6,2000,0"
+m45 = ephem.readdb(m45_x)
+m45.compute(site) # Compute observation values for our specified site
+
+bodies = [s, m, mercury, venus, mars, jupiter, saturn, uranus, neptune, pluto, m45 ]
 n = len(bodies)
 count = 0
 threshold = 15.0 * math.pi / 180.0  # 15 degrees
