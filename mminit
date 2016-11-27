@@ -1,0 +1,39 @@
+### BEGIN INIT INFO
+# Provides: Mooseometer process start/stop
+# Required-Start: $remote_fs $syslog
+# Required-Stop: $remote_fs $syslog
+# Default-Start: 2 3 4 5
+# Default-Stop: 0 1 6
+# Short-Description: Mooseometer display
+# Description: Displays temperature via attached OLED
+### END INIT INFO
+
+
+#! /bin/sh
+# /etc/init.d/mminit
+
+# Author: David Bryant (djbryant@gmail.com)
+# Version: 1.0 (23-Jan-2016)
+
+export HOME
+case "$1" in
+    start)
+        echo "Starting Mooseometer"
+        /usr/bin/python -u /home/dbryant/Software/mooseometer.py > /home/dbryant/Software/mm.out 2>&1 &
+    ;;
+    stop)
+        echo "Stopping Mooseometer"
+	MOOSEOMETER_PID=`ps auxwww | grep mooseometer.py | head -1 | awk '{print $2}'`
+		if [ -z "$MOOSEOMETER_PID" ] 
+		then
+			echo "Mooseometer feed was not running..."
+		else
+				kill -9 $MOOSEOMETER_PID
+		fi
+    ;;
+    *)
+        echo "Usage: /etc/init.d/mminit {start|stop}"
+        exit 1
+    ;;
+esac
+exit 0

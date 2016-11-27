@@ -60,6 +60,12 @@ def fmt_date(date):
     return "{:02d}/{:02d}/{:02d} {:02d}:{:02d}:{:04.1f}".format(
         d[1],d[2],d[0],d[3],d[4],d[5])
 
+# Function to format a Date object just as m/d h:m
+def fmt_shortdate(date):
+    d = date.tuple()
+    return "{:02d}/{:02d} {:02d}:{:02d}".format(
+        d[1],d[2],d[3],d[4])
+
 # Function to generate the output table entry for a body at a specific location.  Note
 # that the location object contains the specific time of interest (location.date)
 def print_visinfo(body,location):
@@ -232,7 +238,8 @@ for i in range(n):
             count = count + 1
 
 
-# Handle special objects such as comets
+# Handle special objects such as comets.  A great source of orbital element info is
+# http://www.minorplanetcenter.net/iau/Ephemerides/Soft03.html
 print "\n*** Special Objects ***"
 print "       BODY        | VIS |   ALT  |   AZ   |    RISE     |     SET     |  MAG  |"
 print "-------------------+-----+--------+--------+-------------+-------------+-------+"
@@ -240,7 +247,26 @@ panstarrs_x = "C/Pan-STARRS,h, 3/10.1691/2013,84.2072,65.6659,333.6512,1.000033,
 panstarrs = ephem.readdb(panstarrs_x)
 print_visinfo(panstarrs,site);
 
-ison_x = "C/ISON,h,11/28.7929/2013,61.882,295.7335,345.5117,1.000004,0.012501, 1/01/2000,6,4,0"
+# ison_x = "C/ISON,h,11/28.7929/2013,61.882 ,295.7335,345.5117,1.000004,0.012501,1/01/2000,6,4,0"
+ison_x   = "C/ISON,h,11/28.7747/2013,62.3990,295.6529,345.5644,1.000002,0.012444,2000,7.5,3.2"
 ison = ephem.readdb(ison_x)
 print_visinfo(ison,site)
 print "-------------------+-----+--------+--------+-------------+-------------+-------+"
+print "\nComet ISON position = RA: {}, DEC: {}".format(ison.ra,ison.dec)
+
+# Try calculating visibility of the International Space Station
+# Always get the latest ISS TLE data from:
+# http://spaceflight.nasa.gov/realdata/sightings/SSapplications/Post/JavaSSOP/orbit/ISS/SVPOST.html
+iss = ephem.readtle('ISS',
+    '1 25544U 98067A   16286.52531556  .00016717  00000-0  10270-3 0  9002',
+    '2 25544  51.6436 192.7750 0007020  61.1970 298.9887 15.54168275 23236'
+)
+info = site.next_pass(iss)
+print
+print "*** International Space Station visibility -- Next Pass "
+print "   RISE @        AZ      MAX ALT @      AZ        SET @        AZ"
+print "-------------+--------+-------------+--------+-------------+--------+"
+print " {} | {} | {} | {} | {} | {} |".format(fmt_shortdate(info[0]),
+    fmt_angle(info[1]), fmt_shortdate(info[2]),fmt_angle(info[3]),
+    fmt_shortdate(info[4]),fmt_angle(info[5]))
+print "-------------+--------+-------------+--------+-------------+--------+"
